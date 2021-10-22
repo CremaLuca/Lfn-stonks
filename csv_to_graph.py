@@ -52,7 +52,7 @@ EXPECTED_COLUMNS: List[str] = [
     "NAICSSubIndustry",
     "CUSIP",
     "ISIN",
-    "FIGI"
+    "FIGI",
 ]
 
 # Define default CSV columns indexes
@@ -62,35 +62,86 @@ DEFAULT_MARKET_VALUE_COLUMN: int = EXPECTED_COLUMNS.index("Market Value")
 DEFAULT_CURRENCY_COLUMN: int = EXPECTED_COLUMNS.index("Currency")
 
 
-def main():
+def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='Loads a CSV file and converts it into a networkx graph in weitghted edgelist format.')
-    parser.add_argument('filename', metavar='PATH', type=str, nargs=1,
-                        help='path of the CSV file to parse.')
-    parser.add_argument('-o', '--output', metavar='PATH', type=str, nargs='?', default='out_graph.edgeList',
-                        help='path of the output file, default `out_graph.edgeList`.')
+        description="Loads a CSV file and converts it into a networkx graph in weitghted edgelist format."
+    )
+    parser.add_argument("filename", metavar="PATH", type=str, nargs=1, help="path of the CSV file to parse.")
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="PATH",
+        type=str,
+        nargs=1,
+        default="out_graph.edgeList",
+        help="path of the output file, default `out_graph.edgeList`.",
+    )
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
-    csv_columns_group.add_argument('--etf-ticker-column', metavar='INT', type=int,
-                                   nargs='?', default=DEFAULT_ETF_TICKER_COLUMN,
-                                   help=f"index of the column containing the ETF ticker, default `{DEFAULT_ETF_TICKER_COLUMN}`.")
-    csv_columns_group.add_argument('--component-ticker-column', metavar='INT', type=int,
-                                   nargs='?', default=DEFAULT_COMPONENT_TICKER_COLUMN,
-                                   help=f"index of the column containing the component ticker, default `{DEFAULT_COMPONENT_TICKER_COLUMN}`.")
-    csv_columns_group.add_argument('--market-value-column', metavar='INT', type=int,
-                                   nargs='?', default=DEFAULT_MARKET_VALUE_COLUMN,
-                                   help=f"index of the column containing the amount of $currency the ETF has of the component, default `{DEFAULT_MARKET_VALUE_COLUMN}`.")
-    csv_columns_group.add_argument('--currency-column', metavar='INT', type=int, nargs='?', default=DEFAULT_CURRENCY_COLUMN,
-                                   help=f"index of the column containing the currency of the market value, default `{DEFAULT_CURRENCY_COLUMN}`.")
+    csv_columns_group.add_argument(
+        "--etf-ticker-column",
+        metavar="INT",
+        type=int,
+        nargs="?",
+        default=DEFAULT_ETF_TICKER_COLUMN,
+        help=f"index of the column containing the ETF ticker, default `{DEFAULT_ETF_TICKER_COLUMN}`.",
+    )
+    csv_columns_group.add_argument(
+        "--component-ticker-column",
+        metavar="INT",
+        type=int,
+        nargs="?",
+        default=DEFAULT_COMPONENT_TICKER_COLUMN,
+        help=f"index of the column containing the component ticker, default `{DEFAULT_COMPONENT_TICKER_COLUMN}`.",
+    )
+    csv_columns_group.add_argument(
+        "--market-value-column",
+        metavar="INT",
+        type=int,
+        nargs="?",
+        default=DEFAULT_MARKET_VALUE_COLUMN,
+        help=f"index of the column containing the amount of $currency the ETF has of the component, \
+            default `{DEFAULT_MARKET_VALUE_COLUMN}`.",
+    )
+    csv_columns_group.add_argument(
+        "--currency-column",
+        metavar="INT",
+        type=int,
+        nargs="?",
+        default=DEFAULT_CURRENCY_COLUMN,
+        help=f"index of the column containing the currency of the market value, default `{DEFAULT_CURRENCY_COLUMN}`.",
+    )
     csv_parsing_group = parser.add_argument_group("CSV parsing", "Details about CSV parsing process.")
-    csv_parsing_group.add_argument('--consider-first-line', default=False, action='store_true',
-                                   help='use this when the first line of the CSV contains data instead of an header.')
-    csv_parsing_group.add_argument('-d', '--delimiter', metavar='CHAR', type=str, nargs='?', default=',',
-                                   help='delimiter character of columns for the input CSV file, default `,`.')
-    csv_parsing_group.add_argument('-q', '--quotechar', metavar='CHAR', type=str, nargs='?', default='"',
-                                   help='quote character of strings for the input CSV file, default `"`.')
-    args = parser.parse_args()
-    print(args)
-    with open(args.filename[0], mode="r", newline='', encoding='utf-8', errors='?') as csvfile:
+    csv_parsing_group.add_argument(
+        "--consider-first-line",
+        default=False,
+        action="store_true",
+        help="use this when the first line of the CSV contains data instead of an header.",
+    )
+    csv_parsing_group.add_argument(
+        "-d",
+        "--delimiter",
+        metavar="CHAR",
+        type=str,
+        nargs="?",
+        default=",",
+        help="delimiter character of columns for the input CSV file, default `,`.",
+    )
+    csv_parsing_group.add_argument(
+        "-q",
+        "--quotechar",
+        metavar="CHAR",
+        type=str,
+        nargs="?",
+        default='"',
+        help='quote character of strings for the input CSV file, default `"`.',
+    )
+    return parser
+
+
+def main():
+    parser = make_parser()
+    args = parser.parse_args()  # Parse command line arguments
+    with open(args.filename[0], mode="r", newline="", encoding="utf-8", errors="?") as csvfile:
         if args.consider_first_line is False:
             csvfile.readline()  # Skip the first CSV header row
         with open(args.output, mode="w") as outfile:
