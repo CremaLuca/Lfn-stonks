@@ -7,7 +7,11 @@ __version__ = "0.1"
 
 import argparse
 import csv
-from typing import List
+import logging
+import re
+from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 # Expected CSV columns when parsing ConstituentData.csv file
 EXPECTED_COLUMNS: List[str] = [
@@ -61,6 +65,22 @@ DEFAULT_COMPONENT_TICKER_COLUMN: int = EXPECTED_COLUMNS.index("Constituent Ticke
 DEFAULT_MARKET_VALUE_COLUMN: int = EXPECTED_COLUMNS.index("Market Value")
 DEFAULT_CURRENCY_COLUMN: int = EXPECTED_COLUMNS.index("Currency")
 
+# Currency conversion rates
+CURRENCY_CONVERSION_RATES: Dict[str, float] = {
+    "EUR": 1.0,
+    "USD": 0.858,
+    "GBP": 1.181,
+    "JPY": 0.007563,
+    "SGD": 0.637,
+    "CHF": 0.9375,
+    "MYR": 0.2068,
+    "IDR": 0.00006069,
+}
+
+# List of values that are considered as invalid
+TICKER_REGEX = r"([a-zA-Z0-9\.]{1,8})+"
+WEIGHT_REGEX = r"[\+\-]?([0-9]*\.)?[0-9]+"
+
 
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -75,6 +95,22 @@ def make_parser() -> argparse.ArgumentParser:
         nargs=1,
         default="out_graph.edgeList",
         help="path of the output file, default `out_graph.edgeList`.",
+    )
+    parser.add_argument(
+        "--default-currency",
+        metavar="CURRENCY",
+        type=str,
+        nargs=1,
+        default="USD",
+        help="default currency to use when it is not specified, default `USD`.",
+    )
+    parser.add_argument(
+        "--no-currency-conversion",
+        action="store_true",
+        help="do not convert currencies to euros.",
+    )
+    parser.add_argument(
+        "-log", "--loglevel", type=str, nargs=1, default="warning", help="provide logging level, default `warning`."
     )
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
     csv_columns_group.add_argument(
@@ -138,33 +174,68 @@ def make_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def to_euros(value: float, currency: str) -> float:
+    """
+    Convert a value in a given currency to euros.
+    """
+    if currency not in CURRENCY_CONVERSION_RATES:
+        raise ValueError(f"Unknown currency `{currency}`.")
+    return value * CURRENCY_CONVERSION_RATES[currency]
+
+
 def main():
     parser = make_parser()
     args = parser.parse_args()  # Parse command line arguments
+    logging.basicConfig(level=args.loglevel[0].upper())
     with open(args.filename[0], mode="r", newline="", encoding="utf-8", errors="?") as csvfile:
         if args.consider_first_line is False:
             csvfile.readline()  # Skip the first CSV header row
         with open(args.output, mode="w") as outfile:
             reader = csv.reader(csvfile, delimiter=args.delimiter, quotechar=args.quotechar)
             for row in reader:
-                start_node = row[args.etf_ticker_column]
-                end_node = row[args.component_ticker_column]
-                weight = row[args.market_value_column]
-                # Skip if no value
-                if not start_node or not end_node or not weight:
+                # TODO: pass twice: save the isin the first time and the second time map non-existing
+                # end_nodes to the isin
+                start_node: str = row[args.etf_ticker_column]
+                end_node: str = row[args.component_ticker_column]
+                weight: str = row[args.market_value_column]
+                currency: str = row[args.currency_column]
+                # Skip if None or empty
+                if not any([start_node, end_node, weight]):
                     continue
-                # Skip if empty value
-                if weight == " " or weight == "-" or end_node == " " or start_node == " ":
+                # Discard indices
+                if start_node[0] == ".":
                     continue
                 # Remove spaces from names
                 if " " in start_node:
                     start_node = start_node.split(" ")[0]
                 if " " in end_node:
                     end_node = end_node.split(" ")[0]
+                # Skip if value is invalid
+                if not all(re.match(TICKER_REGEX, value) for value in [start_node, end_node]) or not re.match(
+                    WEIGHT_REGEX, weight
+                ):
+                    logger.debug(
+                        f"discarded {[start_node, end_node, weight, currency]}: TICKER_REGEX or \
+                          WEIGHT_REGEX did not match"
+                    )
+                    continue
                 # Remove self-loop edges
                 if start_node == end_node:
+                    # NOTE: this means the node is an ETF
                     continue
-                # TODO: convert weight in non-USD to USD
+                # Parse the weight to float
+                try:
+                    weight = float(weight)
+                except ValueError:
+                    logger.debug(f"discarded {[start_node, end_node, weight, currency]}: `{weight}` is not a float")
+                    continue
+                # Convert weight in non-EUR to EUR
+                if not args.no_currency_conversion:
+                    # Check currency
+                    if not re.match("([a-zA-Z]+){1,4}", currency):
+                        logger.debug(f"converted currency `{currency}` to {args.default_currency}")
+                        currency = args.default_currency
+                    weight = to_euros(weight, currency)
                 outfile.write(f"{start_node} {end_node} {weight}\n")
     print("Done!")
 
