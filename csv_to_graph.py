@@ -64,6 +64,7 @@ DEFAULT_ETF_TICKER_COLUMN: int = EXPECTED_COLUMNS.index("Composite Ticker")
 DEFAULT_COMPONENT_TICKER_COLUMN: int = EXPECTED_COLUMNS.index("Constituent Ticker")
 DEFAULT_MARKET_VALUE_COLUMN: int = EXPECTED_COLUMNS.index("Market Value")
 DEFAULT_CURRENCY_COLUMN: int = EXPECTED_COLUMNS.index("Currency")
+DEFAULT_ISIN_COLUMN: int = EXPECTED_COLUMNS.index("ISIN")
 
 # Currency conversion rates
 CURRENCY_CONVERSION_RATES: Dict[str, float] = {
@@ -80,6 +81,7 @@ CURRENCY_CONVERSION_RATES: Dict[str, float] = {
 # List of values that are considered as invalid
 TICKER_REGEX = r"([a-zA-Z0-9\.]{1,8})+"
 WEIGHT_REGEX = r"[\+\-]?([0-9]*\.)?[0-9]+"
+ISIN_REGEX = r"[a-zA-Z]{2}[0-9]{4,10}"
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -101,7 +103,7 @@ def make_parser() -> argparse.ArgumentParser:
         metavar="CURRENCY",
         type=str,
         nargs=1,
-        default="USD",
+        default=["USD"],
         help="default currency to use when it is not specified, default `USD`.",
     )
     parser.add_argument(
@@ -110,7 +112,7 @@ def make_parser() -> argparse.ArgumentParser:
         help="do not convert currencies to euros.",
     )
     parser.add_argument(
-        "-log", "--loglevel", type=str, nargs=1, default="warning", help="provide logging level, default `warning`."
+        "-log", "--loglevel", type=str, nargs=1, default=["warning"], help="provide logging level, default `warning`."
     )
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
     csv_columns_group.add_argument(
@@ -145,6 +147,14 @@ def make_parser() -> argparse.ArgumentParser:
         nargs="?",
         default=DEFAULT_CURRENCY_COLUMN,
         help=f"index of the column containing the currency of the market value, default `{DEFAULT_CURRENCY_COLUMN}`.",
+    )
+    csv_columns_group.add_argument(
+        "--isin-column",
+        metavar="INT",
+        type=int,
+        nargs="?",
+        default=DEFAULT_ISIN_COLUMN,
+        help=f"index of the column containing the isin of the component, default `{DEFAULT_ISIN_COLUMN}`.",
     )
     csv_parsing_group = parser.add_argument_group("CSV parsing", "Details about CSV parsing process.")
     csv_parsing_group.add_argument(
@@ -187,6 +197,9 @@ def main():
     parser = make_parser()
     args = parser.parse_args()  # Parse command line arguments
     logging.basicConfig(level=args.loglevel[0].upper())
+
+    tickers: Dict[str, str] = {}  # Maps component ISIN to tickers
+    # Load CSV file
     with open(args.filename[0], mode="r", newline="", encoding="utf-8", errors="?") as csvfile:
         if args.consider_first_line is False:
             csvfile.readline()  # Skip the first CSV header row
@@ -199,8 +212,9 @@ def main():
                 end_node: str = row[args.component_ticker_column]
                 weight: str = row[args.market_value_column]
                 currency: str = row[args.currency_column]
+                isin: str = row[args.isin_column]
                 # Skip if None or empty
-                if not any([start_node, end_node, weight]):
+                if not all([start_node, end_node, weight]):
                     continue
                 # Discard indices
                 if start_node[0] == ".":
@@ -214,11 +228,18 @@ def main():
                 if not all(re.match(TICKER_REGEX, value) for value in [start_node, end_node]) or not re.match(
                     WEIGHT_REGEX, weight
                 ):
-                    logger.debug(
-                        f"discarded {[start_node, end_node, weight, currency]}: TICKER_REGEX or \
-                          WEIGHT_REGEX did not match"
-                    )
-                    continue
+                    if not isin or isin not in tickers:
+                        logger.debug(
+                            f"discarded {[start_node, end_node, weight, currency]}: TICKER_REGEX or \
+                            WEIGHT_REGEX did not match"
+                        )
+                        continue
+                    else:
+                        # Assing a ticker found in previous ETFs
+                        end_node = tickers[isin]
+                elif isin and re.match(ISIN_REGEX, isin):
+                    # Store the ticker for later use
+                    tickers[isin] = end_node
                 # Remove self-loop edges
                 if start_node == end_node:
                     # NOTE: this means the node is an ETF
@@ -233,8 +254,8 @@ def main():
                 if not args.no_currency_conversion:
                     # Check currency
                     if not re.match("([a-zA-Z]+){1,4}", currency):
-                        logger.debug(f"converted currency `{currency}` to {args.default_currency}")
-                        currency = args.default_currency
+                        logger.debug(f"converted currency `{currency}` to {args.default_currency[0]}")
+                        currency = args.default_currency[0]
                     weight = to_euros(weight, currency)
                 outfile.write(f"{start_node} {end_node} {weight}\n")
     print("Done!")
