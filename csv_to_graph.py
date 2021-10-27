@@ -211,37 +211,50 @@ def main():
     if not args.no_currency_conversion:
         df.fillna(value={args.currency_column: args.default_currency[0]}, inplace=True)
     print("After currency fillNaN\n", df.describe())
+    # Remove ticker location (like .JP .AU .HK )
+    df[args.etf_ticker_column] = df[args.etf_ticker_column].str.replace(r"(\.|-| )+.*", "", regex=True)
+    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace(r"(\.|-| )+.*", "", regex=True)
+    print("After ticker location removal\n", df.describe())
+    # Remove "CASH" from tickers
+    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace("CASH_", "", regex=False)
+    # TODO: set the currency to the remaining part of the ticker
+    print("After 'CASH_' removal\n", df.describe())
+    # Rename cash tickers to their currency
+    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace(
+        "0", args.default_currency[0], regex=False
+    )
+    print("After '0' (cash) removal\n", df.describe())
     # Fill missing ticker values
-    df.loc[df[args.etf_ticker_column].isnull(), args.etf_ticker_column] = df.loc[
-        df[args.etf_ticker_column].isnull(), args.isin_column
+    df.loc[df[args.component_ticker_column].isnull(), args.component_ticker_column] = df.loc[
+        df[args.component_ticker_column].isnull(), args.isin_column
     ].map(
         df.loc[df[args.isin_column].notnull()]
         .groupby(args.isin_column)
-        .aggregate({args.etf_ticker_column: "first"})[args.etf_ticker_column]
+        .aggregate({args.component_ticker_column: "first"})[args.component_ticker_column]
     )
     print("After ticker fill\n", df.describe())
     # Fill the missing isin values
     df.loc[df[args.isin_column].isnull(), args.isin_column] = df.loc[
-        df[args.isin_column].isnull(), args.etf_ticker_column
+        df[args.isin_column].isnull(), args.component_ticker_column
     ].map(
-        df.loc[df[args.etf_ticker_column].notnull()]
-        .groupby(args.etf_ticker_column)
+        df.loc[df[args.component_ticker_column].notnull()]
+        .groupby(args.component_ticker_column)
         .aggregate({args.isin_column: "first"})[args.isin_column]
     )
     print("After isin fill\n", df.describe())
     # Filter out the invalid tickers
     df = df[
-        (df[args.etf_ticker_column].notnull() | df[args.etf_ticker_column].str.match(TICKER_REGEX))
-        & (df[args.component_ticker_column].notnull() | df[args.component_ticker_column].str.match(TICKER_REGEX))
+        (df[args.etf_ticker_column].notnull() & df[args.etf_ticker_column].str.match(TICKER_REGEX))
+        & (df[args.component_ticker_column].notnull() & df[args.component_ticker_column].str.match(TICKER_REGEX))
     ]
     print("After invalid tickers removal\n", df.describe())
     # Remove indices (whose ticker start with .)
-    df = df[df[args.etf_ticker_column].str.startswith(".") is False]
+    df = df[df[args.etf_ticker_column].str.startswith(".") == False]  # noqa: E712
     print("After indices removal\n", df.describe())
-    # Remove ticker location (like .JP .AU .HK )
-    df[args.etf_ticker_column] = df[args.etf_ticker_column].str.replace(r"\..*", "", regex=True)
-    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace(r"\..*", "", regex=True)
-    print("After ticker location removal\n", df.describe())
+    # Get the rows with same ticker but different isin
+    # df_same_ticker_diff_isin = df[df[args.component_ticker_column].duplicated(
+    #    keep=False) & df[args.isin_column].duplicated(keep=False)].sort_values(args.component_ticker_column)
+    # print("Same ticker, different isin\n", df_same_ticker_diff_isin.head(20))
     # Rename market value column to weight
     df.rename(columns={args.market_value_column: "weight"}, inplace=True)
     # Create the networkx graph edges
