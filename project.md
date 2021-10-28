@@ -1,55 +1,71 @@
-# Roadmap
+# Learning from networks project documentation
 
-Defines what there is to do and when more or less we should do it.
+**Partecipants**:
 
-## Project presentation
+- Luca Crema 2026827
+- Riccardo Crociani 2022466
 
-By fri 29/10/21 we have to deliver the project presentation.
+## Title
 
-### Required information
+How hard is to work on a new raw dataset?
 
-- Title
-- Motivation
-  - Questions
-  - Data
-    - Where to find it
-    - What kind of graph & attributes of nodes and edges
-    - Number of nodes and edges
-    - Expected shape
-- Method
-  - Computational problem
-  - Algorithms
-    - Which exact algos, and which approx, when do we switch between them
-- Intended experiments
-  - Implementations (where to find algos/libraries)
-  - Experiments details
-  - Machine for experiments
-
-### Our information
-
-#### Title
-
-???
-
-#### Motivation
+## Motivation
 
 We want to explore the process of data gathering, convert them to a graph and compute meaningful metrics on it.
 
-#### Data
+## Data
 
 Exchanged Traded Funds (ETFs) components datasets.
 
-##### Where to find it
+An ETF is an asset traded on the stock market just like any other stock that usually tracks a stock index.
+Its component are called "underlying assets" or "the underlying" and are the index's components with the same percentages as in the index.
+An ETF is emitted and sold by an "Authorized Partecipant" which is in charge of making sure the ETF is following the index as closely as possible.
 
-Start from an initial dataset found for free [at this link](https://masterdatareports.com/), which is updated at the end of each month, and continue our search to find more freely available data.
+### Where to find it
 
-##### What kind of graph
+Start from an initial dataset found for free [at this link](https://masterdatareports.com/), which is updated at around the end of each month, and continue our search to find more freely available data.
+
+### What kind of graph
 
 It is a weighted directed graph. The nodes can represent fund nodes or component nodes, note that a fund node can also be a component. Edges go from a fund node to a component node and the weight is the amount of money in euros the fund owns of that component.
 
-##### Number of nodes and edges
+### Number of nodes and edges
 
 The american and european financial market contains about 100.000 securities between stocks, bonds and funds, so we expect that order of magnitude for the nodes (the initial dataset contains 31.000 nodes). Each fund contains on average a few hundred components so we are expecting an order of magnitude of a milion edges (the initial dataset contains 420.000 edges).
 
-##### Expected shape
+## Method
 
+The method we are going to use to parse the gathered data into a graph is by trial and error: each raw dataset has its own types of errors so all we can do is explore each dataset individually.
+
+### Computational problem
+
+Once the datasets are clean and parsed, we want to apply the different metrics algorithms we have seen, exploring the limits of the exact computations and the reachable levels of approximation.
+
+### Algorithms
+
+All the node-level metrics, network patterns and network clustering algorithms.
+
+## Intended experiments
+
+### Implementations/libraries
+
+We are mostly going to use python code with networkx library for graph analysis and pandas with numpy to parse the dataset.
+
+#### Experiments
+
+We are interested in computing the various graph scores on a "unexplored" dataset and give them a meaning.
+
+### Machine for experiments
+
+The most powerful of our computers has the following specs: 4.3GHz 4-core Intel i5 CPU, 16GB RAM DDR3 1600Hz, 30GB free SSD space, 500GB free HDD space, 2GHz Nvidia GTX1050Ti GPU.
+We also should have access to the DEI's CAPRI machine (from Parallel Algorithms probject), although we don't know if the access will ever expire.
+
+
+## References
+
+- [Master data reports initial dataset](https://masterdatareports.com/)
+- [Networkx library](https://networkx.org/)
+- [Karate Club unsupervised learning library](https://github.com/benedekrozemberczki/karateclub)
+- [Pandas library](https://pandas.pydata.org/)
+- [Numpy library](https://numpy.org/)
+- [Official python graph computation resources](https://wiki.python.org/moin/PythonGraphApi)
