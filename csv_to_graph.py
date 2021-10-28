@@ -1,18 +1,21 @@
+#!
 """
 Loads a constituent CSV file and converts it to a newtorkx graph in weitghted edgelist format.
 """
 
-__author__ = "Luca Crema"
-__version__ = "0.1"
-
-import argparse
-import logging
-from typing import Dict, List
-
-import networkx as nx
 import pandas as pd
+import networkx as nx
+from typing import Dict, List
+import logging
+import argparse
+
+__author__ = "Luca Crema"
+__version__ = "1.0"
+__all__ = ["parse_csv"]
+
 
 logger = logging.getLogger(__name__)
+
 
 # Expected CSV columns when parsing ConstituentData.csv file
 EXPECTED_COLUMNS: List[str] = [
@@ -80,22 +83,23 @@ CURRENCY_CONVERSION_RATES: Dict[str, float] = {
 }
 
 # List of values that are considered as invalid
-TICKER_REGEX = r"([a-zA-Z0-9\.]{1,8})+"
-WEIGHT_REGEX = r"[\+\-]?([0-9]*\.)?[0-9]+"
-ISIN_REGEX = r"[a-zA-Z]{2}[0-9]{4,10}"
+TICKER_REGEX: str = r"([a-zA-Z0-9\.]{1,8})+"
+WEIGHT_REGEX: str = r"[\+\-]?([0-9]*\.)?[0-9]+"
+ISIN_REGEX: str = r"[a-zA-Z]{2}[0-9]{4,10}"
+LOCATION_REGEX: str = r"(\.|-| )+.*"
 
 
-def make_parser() -> argparse.ArgumentParser:
+def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Loads a CSV file and converts it into a networkx graph in weitghted edgelist format."
     )
-    parser.add_argument("filename", metavar="PATH", type=str, nargs=1, help="path of the CSV file to parse.")
+    parser.add_argument("filename", metavar="PATH", type=str, nargs="?", help="path of the CSV file to parse.")
     parser.add_argument(
         "-o",
         "--output",
         metavar="PATH",
         type=str,
-        nargs=1,
+        nargs="?",
         default=["out_graph"],
         help="path of the output file, default `out_graph.edgeList`.",
     )
@@ -103,7 +107,7 @@ def make_parser() -> argparse.ArgumentParser:
         "--default-currency",
         metavar="CURRENCY",
         type=str,
-        nargs=1,
+        nargs="?",
         default=["USD"],
         help="default currency to use when it is not specified, default `USD`.",
     )
@@ -113,7 +117,7 @@ def make_parser() -> argparse.ArgumentParser:
         help="do not convert currencies to euros.",
     )
     parser.add_argument(
-        "-log", "--loglevel", type=str, nargs=1, default=["warning"], help="provide logging level, default `warning`."
+        "-log", "--loglevel", type=str, nargs="?", default=["warning"], help="provide logging level, default `warning`."
     )
     # CSV columns group
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
@@ -181,7 +185,7 @@ def make_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def to_euros(value: float, currency: str) -> float:
+def _to_uniform_currency(value: float, currency: str) -> float:
     """
     Convert a value in a given currency to euros.
     """
@@ -190,90 +194,117 @@ def to_euros(value: float, currency: str) -> float:
     return value * CURRENCY_CONVERSION_RATES[currency]
 
 
-def main():
-    parser = make_parser()
-    args = parser.parse_args()  # Parse command line arguments
-    logging.basicConfig(level=args.loglevel[0].upper())
+def _replace(df: pd.DataFrame, column: str, pattern: str, replacement: str) -> pd.DataFrame:
+    """
+    Replace a pattern in a dataframe.
+    """
+    df[column] = df[column].str.replace(pattern, replacement, regex=True)
+    return df
 
+
+def _fill_column(df: pd.DataFrame, missing_column: str, filler_column: str) -> pd.DataFrame:
+    """
+    Replaces empty "missing_column" values with the same-column value from another row that has
+    the same "filler_column" value.
+    """
+    df.loc[df[missing_column].isnull(), missing_column] = df.loc[df[missing_column].isnull(), filler_column].map(
+        df.loc[df[filler_column].notnull()].groupby(filler_column).aggregate({missing_column: "first"})[missing_column]
+    )
+    return df
+
+
+def _filter_regex(df: pd.DataFrame, column: str, regex: str) -> pd.DataFrame:
+    """
+    Filters a dataframe by a regex.
+    """
+    return df[df[column].notnull() & df[column].str.match(regex)]
+
+
+def _describe(df: pd.DataFrame, description: str = None) -> pd.DataFrame:
+    """
+    Describe a dataframe.
+    """
+    if description:
+        print(description)
+    print(df.describe(include="all"))
+    return df
+
+
+def parse_csv(
+    filename: str,
+    etf_ticker_column: str = DEFAULT_ETF_TICKER_COLUMN,
+    component_ticker_column: str = DEFAULT_COMPONENT_TICKER_COLUMN,
+    market_value_column: str = DEFAULT_MARKET_VALUE_COLUMN,
+    currency_column: str = DEFAULT_CURRENCY_COLUMN,
+    isin_column: str = DEFAULT_ISIN_COLUMN,
+    delimiter: str = ",",
+    quotechar: str = '"',
+    default_currency: str = "USD",
+    **kwargs,
+) -> nx.DiGraph:
+    """
+    Parses a dataset in CSV format and returns a Netoworkx DiGraph.
+
+    Parameters:
+        filename: path of the CSV file to parse.
+
+    Returns:
+        A Networkx DiGraph with edges containing market value as 'width' attribute.
+    """
     # Load CSV file
-    df = pd.read_csv(args.filename[0], sep=args.delimiter, quotechar=args.quotechar, encoding="utf-8", na_values=" ")
+    df: pd.DataFrame = pd.read_csv(filename, sep=delimiter, quotechar=quotechar, encoding="utf-8", na_values=" ")
     # Filter out the unwanted columns
-    WANTED_COLUMNS = [
-        args.etf_ticker_column,
-        args.component_ticker_column,
-        args.market_value_column,
-        args.currency_column,
-        args.isin_column,
-    ]
-    df = df[WANTED_COLUMNS]
-    print("After columns filter\n", df.describe())
-    # Fill missing currency values
-    if not args.no_currency_conversion:
-        df.fillna(value={args.currency_column: args.default_currency[0]}, inplace=True)
-    print("After currency fillNaN\n", df.describe())
-    # Remove ticker location (like .JP .AU .HK )
-    df[args.etf_ticker_column] = df[args.etf_ticker_column].str.replace(r"(\.|-| )+.*", "", regex=True)
-    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace(r"(\.|-| )+.*", "", regex=True)
-    print("After ticker location removal\n", df.describe())
-    # Remove "CASH" from tickers
-    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace("CASH_", "", regex=False)
-    # TODO: set the currency to the remaining part of the ticker
-    print("After 'CASH_' removal\n", df.describe())
-    # Rename cash tickers to their currency
-    df[args.component_ticker_column] = df[args.component_ticker_column].str.replace(
-        "0", args.default_currency[0], regex=False
+    wanted_columns = [etf_ticker_column, component_ticker_column, market_value_column, currency_column, isin_column]
+    df = (
+        df.pipe(lambda df: df[wanted_columns])
+        .pipe(_describe, "Filtered columns")
+        # Fill missing currency values
+        .pipe(lambda df: df.fillna(value={currency_column: default_currency[0]}, inplace=False))
+        .pipe(_describe, "Filled NaN currency values")
+        # Remove ticker columns location (like .JP .AU .HK )
+        .pipe(_replace, etf_ticker_column, LOCATION_REGEX, "")
+        .pipe(_replace, component_ticker_column, LOCATION_REGEX, "")
+        .pipe(_describe, "Removed ticker locations")
+        # Remove "CASH" from tickers
+        # TODO: set the currency to the remaining part of the ticker
+        .pipe(_replace, component_ticker_column, "CASH_", "")
+        # Rename cash tickers ("0") to their currency
+        .pipe(_replace, component_ticker_column, "0", default_currency[0])
+        .pipe(_describe, "Renamed cash constituents")
+        # Fill missing tickers with the ticker from other components with the same ISIN
+        .pipe(_fill_column, missing_column=component_ticker_column, filler_column=isin_column)
+        # Fill missing isin with the isin from other components with the same ticker
+        .pipe(_fill_column, missing_column=isin_column, filler_column=component_ticker_column)
+        .pipe(_describe, "Filled ticker and ISIN columns")
+        # Filter out the invalid tickers with the regex
+        .pipe(_filter_regex, column=etf_ticker_column, regex=TICKER_REGEX)
+        .pipe(_filter_regex, column=component_ticker_column, regex=TICKER_REGEX)
+        .pipe(_describe, "Filtered invalid tickers")
+        # Remove indices (etf tickers that start with a dot)
+        .pipe(lambda df: df[df[etf_ticker_column].str.startswith(".") == False])  # noqa: E712
+        .pipe(_describe, "Removed indices")
     )
-    print("After '0' (cash) removal\n", df.describe())
-    # Fill missing ticker values
-    df.loc[df[args.component_ticker_column].isnull(), args.component_ticker_column] = df.loc[
-        df[args.component_ticker_column].isnull(), args.isin_column
-    ].map(
-        df.loc[df[args.isin_column].notnull()]
-        .groupby(args.isin_column)
-        .aggregate({args.component_ticker_column: "first"})[args.component_ticker_column]
-    )
-    print("After ticker fill\n", df.describe())
-    # Fill the missing isin values
-    df.loc[df[args.isin_column].isnull(), args.isin_column] = df.loc[
-        df[args.isin_column].isnull(), args.component_ticker_column
-    ].map(
-        df.loc[df[args.component_ticker_column].notnull()]
-        .groupby(args.component_ticker_column)
-        .aggregate({args.isin_column: "first"})[args.isin_column]
-    )
-    print("After isin fill\n", df.describe())
-    # Filter out the invalid tickers
-    df = df[
-        (df[args.etf_ticker_column].notnull() & df[args.etf_ticker_column].str.match(TICKER_REGEX))
-        & (df[args.component_ticker_column].notnull() & df[args.component_ticker_column].str.match(TICKER_REGEX))
-    ]
-    print("After invalid tickers removal\n", df.describe())
-    # Remove indices (whose ticker start with .)
-    df = df[df[args.etf_ticker_column].str.startswith(".") == False]  # noqa: E712
-    print("After indices removal\n", df.describe())
-    # Get the rows with same ticker but different isin
-    # df_same_ticker_diff_isin = df[df[args.component_ticker_column].duplicated(
-    #    keep=False) & df[args.isin_column].duplicated(keep=False)].sort_values(args.component_ticker_column)
-    # print("Same ticker, different isin\n", df_same_ticker_diff_isin.head(20))
     # Rename market value column to weight
-    df.rename(columns={args.market_value_column: "weight"}, inplace=True)
+    df.rename(columns={market_value_column: "weight"}, inplace=True)
     # Create the networkx graph edges
-    G = nx.from_pandas_edgelist(
+    return nx.from_pandas_edgelist(
         df,
-        source=args.etf_ticker_column,
-        target=args.component_ticker_column,
+        source=etf_ticker_column,
+        target=component_ticker_column,
         edge_attr="weight",
         create_using=nx.DiGraph(),
     )
-    # Add attributes to the nodes
-    # node_data = df[[args.component_ticker_column, args.isin_column]].drop_duplicates()
-    # print("Duplicated tickers\n", node_data[node_data.duplicated(
-    #    [args.component_ticker_column]) == True].sort_values(args.component_ticker_column).head(20))
-    # print("Node data\n", node_data.set_index(args.component_ticker_column).to_dict('index'))
-    #  isin attribute
-    # nx.set_node_attributes(G, node_data.set_index(args.component_ticker_column).to_dict('index'))
-    # Store the graph as GML file
-    nx.write_gml(G, f"{args.output[0]}.gml")
+
+
+def main():
+    """
+    Parses the command line arguments, calls the `parse_csv` function and outputs the graph to.
+    """
+    parser = _make_parser()
+    args = parser.parse_args()  # Parse command line arguments
+    logging.basicConfig(level=args.loglevel[0].upper())
+
+    nx.write_gml(parse_csv(**vars(args)), f"{args.output[0]}.gml")
     print("Done!")
 
 
