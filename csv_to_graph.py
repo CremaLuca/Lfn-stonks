@@ -71,6 +71,7 @@ DEFAULT_CURRENCY_COLUMN: str = "Currency"
 DEFAULT_ISIN_COLUMN: str = "ISIN"
 
 # Currency conversion rates
+DEFAULT_CURRENCY: str = "EUR"
 CURRENCY_CONVERSION_RATES: Dict[str, float] = {
     "EUR": 1.0,
     "USD": 0.858,
@@ -230,6 +231,31 @@ def _describe(df: pd.DataFrame, description: str = None) -> pd.DataFrame:
     return df
 
 
+def _to_float(value: str) -> float:
+    """
+    Convert a string to a float.
+    """
+    try:
+        return float(value)
+    except ValueError:
+        return 0.0
+
+
+def _convert_currency(df: pd.DataFrame, market_value_column: str, currency_column: str) -> pd.DataFrame:
+    """
+    Converts the currency to the default one and changes the currency column value.
+    """
+    df[[market_value_column, currency_column]] = df[[market_value_column, currency_column]].apply(
+        lambda row: (
+            _to_uniform_currency(_to_float(row[market_value_column]), row[currency_column]),
+            DEFAULT_CURRENCY,
+        ),
+        axis=1,
+        result_type="broadcast",
+    )
+    return df
+
+
 def parse_csv(
     filename: str,
     etf_ticker_column: str = DEFAULT_ETF_TICKER_COLUMN,
@@ -255,9 +281,11 @@ def parse_csv(
     df: pd.DataFrame = pd.read_csv(filename, sep=delimiter, quotechar=quotechar, encoding="utf-8", na_values=" ")
     # Filter out the unwanted columns
     wanted_columns = [etf_ticker_column, component_ticker_column, market_value_column, currency_column, isin_column]
+    df = df[wanted_columns]
     df = (
-        df.pipe(lambda df: df[wanted_columns])
-        .pipe(_describe, "Filtered columns")
+        # Remove rows without market value
+        df.pipe(lambda df: df.dropna(subset=[market_value_column]))
+        .pipe(_describe, "Filtered rows without market value")
         # Fill missing currency values
         .pipe(lambda df: df.fillna(value={currency_column: default_currency[0]}, inplace=False))
         .pipe(_describe, "Filled NaN currency values")
@@ -283,6 +311,9 @@ def parse_csv(
         # Remove indices (etf tickers that start with a dot)
         .pipe(lambda df: df[df[etf_ticker_column].str.startswith(".") == False])  # noqa: E712
         .pipe(_describe, "Removed indices")
+        # Uniform currencies
+        .pipe(_convert_currency, market_value_column, currency_column)
+        .pipe(_describe, f"Converted all currencies to {DEFAULT_CURRENCY}")
     )
     # Rename market value column to weight
     df.rename(columns={market_value_column: "weight"}, inplace=True)
