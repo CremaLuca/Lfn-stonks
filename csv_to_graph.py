@@ -14,54 +14,8 @@ __version__ = "1.0"
 __all__ = ["parse_csv"]
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
-
-# Expected CSV columns when parsing ConstituentData.csv file
-EXPECTED_COLUMNS: List[str] = [
-    "Sponsor",
-    "Composite Ticker",
-    "Composite Name",
-    "Constituent Ticker",
-    "Constituent Name",
-    "Weighting",
-    "Identifier",
-    "Date",
-    "Location",
-    "Exchange",
-    "Total Shares Held",
-    "Notional Value",
-    "Market Value",
-    "Sponsor Sector",
-    "Last Trade",
-    "Currency",
-    "BloombergSymbol",
-    "BloombergExchange",
-    "NAICSSector",
-    "NAICSSubIndustry",
-    "Coupon",
-    "Maturity",
-    "Rating",
-    "Type",
-    "SharesOutstanding",
-    "MarketCap",
-    "Earnings",
-    "PE Ratio",
-    "Face",
-    "FIGI",
-    "TimeZone",
-    "DividendAmt",
-    "XDate",
-    "DividendYield",
-    "RIC",
-    "IssueType",
-    "NAICSSector",
-    "NAICSIndustry",
-    "NAICSSubIndustry",
-    "CUSIP",
-    "ISIN",
-    "FIGI",
-]
 
 # Define default CSV columns indexes
 DEFAULT_ETF_TICKER_COLUMN: str = "Composite Ticker"
@@ -70,7 +24,7 @@ DEFAULT_MARKET_VALUE_COLUMN: str = "Market Value"
 DEFAULT_CURRENCY_COLUMN: str = "Currency"
 DEFAULT_ISIN_COLUMN: str = "ISIN"
 
-# Currency conversion rates
+# Currency conversion rates, should be updated periodically
 DEFAULT_CURRENCY: str = "EUR"
 CURRENCY_CONVERSION_RATES: Dict[str, float] = {
     "EUR": 1.0,
@@ -186,11 +140,14 @@ def _make_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _to_uniform_currency(value: float, currency: str) -> float:
+def _to_uniform_currency(value: float, currency: str, ignore_unknown: bool = False) -> float:
     """
     Convert a value in a given currency to euros.
     """
     if currency not in CURRENCY_CONVERSION_RATES:
+        # Return a default 0.0 value if the currency is unknown and we don't care about it
+        if ignore_unknown:
+            return 0.0
         raise ValueError(f"Unknown currency `{currency}`.")
     return value * CURRENCY_CONVERSION_RATES[currency]
 
@@ -223,17 +180,20 @@ def _filter_regex(df: pd.DataFrame, column: str, regex: str) -> pd.DataFrame:
 
 def _describe(df: pd.DataFrame, description: str = None) -> pd.DataFrame:
     """
-    Describe a dataframe.
+    Outputs the describe method of a dataframe on the logger at DEBUG level.
     """
     if description:
-        print(description)
-    print(df.describe(include="all"))
+        logger.debug(description)
+    logger.debug(df.describe(include="all"))
     return df
 
 
 def _to_float(value: str) -> float:
     """
     Convert a string to a float.
+
+    Returns:
+        The float value of the string if it is a valid float, else 0.0.
     """
     try:
         return float(value)
@@ -275,13 +235,20 @@ def parse_csv(
         filename: path of the CSV file to parse.
 
     Returns:
-        A Networkx DiGraph with edges containing market value as 'width' attribute.
+        A Networkx DiGraph with edges containing market value as 'weight' attribute.
     """
     # Load CSV file
     df: pd.DataFrame = pd.read_csv(filename, sep=delimiter, quotechar=quotechar, encoding="utf-8", na_values=" ")
     # Filter out the unwanted columns
-    wanted_columns = [etf_ticker_column, component_ticker_column, market_value_column, currency_column, isin_column]
+    wanted_columns: List[str] = [
+        etf_ticker_column,
+        component_ticker_column,
+        market_value_column,
+        currency_column,
+        isin_column,
+    ]
     df = df[wanted_columns]
+
     df = (
         # Remove rows without market value
         df.pipe(lambda df: df.dropna(subset=[market_value_column]))
@@ -311,10 +278,17 @@ def parse_csv(
         # Remove indices (etf tickers that start with a dot)
         .pipe(lambda df: df[df[etf_ticker_column].str.startswith(".") == False])  # noqa: E712
         .pipe(_describe, "Removed indices")
-        # Uniform currencies
-        .pipe(_convert_currency, market_value_column, currency_column)
-        .pipe(_describe, f"Converted all currencies to {DEFAULT_CURRENCY}")
     )
+    # Avoit currency conversion if not wanted
+    if "no-currency-conversion" not in kwargs or not kwargs["no-currency-conversion"]:
+        df = (
+            # Uniform currencies
+            df.pipe(
+                _convert_currency,
+                market_value_column,
+                currency_column,
+            ).pipe(_describe, f"Converted all currencies to {DEFAULT_CURRENCY}")
+        )
     # Rename market value column to weight
     df.rename(columns={market_value_column: "weight"}, inplace=True)
     # Create the networkx graph edges
@@ -329,14 +303,14 @@ def parse_csv(
 
 def main():
     """
-    Parses the command line arguments, calls the `parse_csv` function and outputs the graph to.
+    Parses the command line arguments, calls the `parse_csv` function and outputs the graph to a gml file.
     """
     parser = _make_parser()
     args = parser.parse_args()  # Parse command line arguments
     logging.basicConfig(level=args.loglevel[0].upper())
 
     nx.write_gml(parse_csv(**vars(args)), f"{args.output[0]}.gml")
-    print("Done!")
+    logger.info("Done!")
 
 
 if __name__ == "__main__":
