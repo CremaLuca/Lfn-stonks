@@ -1,8 +1,8 @@
 
 import networkx as nx
 
-def load_graph(filename : str = "out.edgeList"):
-    return nx.read_weighted_edgelist(filename, create_using=nx.DiGraph)
+def load_graph(filename : str = "out_graph.gml"):
+    return nx.read_gml(filename)
 
 def capitalization_attribute(G):
     """
@@ -41,7 +41,7 @@ def main():
     print("Loading graph")
     G = load_graph()
     capitalization_attribute(G)
-    print("Graph loaded", G)
+    print("Graph loaded:\n", G)
     k = 20
     print(f"Top {k} nodes with highest capitalization: {max_k_capitalization(G, k)}")
     b_centralities = betweenness_centrality(G, percentage=0.02)
