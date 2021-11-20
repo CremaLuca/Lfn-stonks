@@ -20,11 +20,8 @@ def compute_capitalization(G):
         G.nodes[node]["capitalization"] = capitalization
 
 
-def closeness_centrality(G):
-    pass  # Networkx does not have approximate algorithm
-
-
 def random_subgraph(G, n_nodes):
+    """ """
     # Returns a random subgraph of G with n_nodes nodes and no negative cycles
 
     sub_graph = nx.subgraph(G, list(np.random.choice(list(G.nodes), n_nodes, replace=False)))
