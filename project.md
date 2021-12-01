@@ -7,7 +7,7 @@
 
 ## Title
 
-How hard is to work on a new raw dataset?
+How hard is it to work on a new raw dataset? Which **useful** metrics can be computed in reasonable time?
 
 ## Motivation
 
@@ -23,7 +23,7 @@ An ETF is emitted and sold by an "Authorized Partecipant" which is in charge of 
 
 ### Where to find it
 
-Start from an initial dataset found for free [at this link](https://masterdatareports.com/), which is updated at around the end of each month, and continue our search to find more freely available data.
+Start from an initial dataset found for free [at this link](https://masterdatareports.com/), which is updated at around the end of each month.
 
 ### What kind of graph
 
@@ -39,11 +39,11 @@ The method we are going to use to parse the gathered data into a graph is by tri
 
 ### Computational problem
 
-Once the datasets are clean and parsed, we want to apply the different metrics algorithms we have seen, exploring the limits of the exact computations and the reachable levels of approximation.
+Once the datasets are clean and parsed, we want to apply some of the different metrics computation algorithms we have seen, exploring the limits of the exact computations and the reachable levels of approximation.
 
 ### Algorithms
 
-All the node-level metrics, network patterns and network clustering algorithms.
+Some of the node-level metrics, network patterns and network clustering algorithms.
 
 ## Intended experiments
 
@@ -58,7 +58,6 @@ We are interested in computing the various graph scores on a "unexplored" datase
 ### Machine for experiments
 
 The most powerful of our computers has the following specs: 4.3GHz 4-core Intel i5 CPU, 16GB RAM DDR3 1600Hz, 30GB free SSD space, 500GB free HDD space, 2GHz Nvidia GTX1050Ti GPU.
-We also should have access to the DEI's CAPRI machine (from Parallel Algorithms probject), although we don't know if the access will ever expire.
 
 ## References
 
@@ -67,4 +66,5 @@ We also should have access to the DEI's CAPRI machine (from Parallel Algorithms 
 - [Karate Club unsupervised learning library](https://github.com/benedekrozemberczki/karateclub)
 - [Pandas library](https://pandas.pydata.org/)
 - [Numpy library](https://numpy.org/)
+- [Scipy library](https://scipy.org/)
 - [Official python wiki: Graph computation resources](https://wiki.python.org/moin/PythonGraphApi)
