@@ -1,0 +1,2 @@
+https://github.com/fmagin/networkx-stubs/archive/master.zip
+pandas-stubs==1.2.0.44

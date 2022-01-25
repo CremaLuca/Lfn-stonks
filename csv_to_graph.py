@@ -1,6 +1,7 @@
 #!
 """
 Loads a constituent CSV file and converts it to a newtorkx graph in weitghted edgelist format.
+Can be used both as a command-line script and as a python imporable module.
 """
 
 import pandas as pd
@@ -46,7 +47,8 @@ LOCATION_REGEX: str = r"(\.|-| )+.*"
 
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Loads a CSV file and converts it into a networkx graph in weitghted edgelist format."
+        description="Loads a CSV file and converts it into a networkx graph in weitghted edgelist format.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("filename", metavar="PATH", type=str, nargs="?", help="path of the CSV file to parse.")
     parser.add_argument(
@@ -56,7 +58,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=["out_graph"],
-        help="path of the output file, default `out_graph.edgeList`.",
+        help="path of the output file.",
     )
     parser.add_argument(
         "--default-currency",
@@ -64,16 +66,14 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=["USD"],
-        help="default currency to use when it is not specified, default `USD`.",
+        help="default currency to use when it is not specified.",
     )
     parser.add_argument(
         "--no-currency-conversion",
         action="store_true",
         help="do not convert currencies to euros.",
     )
-    parser.add_argument(
-        "-log", "--loglevel", type=str, nargs="?", default=["warning"], help="provide logging level, default `warning`."
-    )
+    parser.add_argument("-log", "--loglevel", type=str, nargs="?", default=["warning"], help="provide logging level.")
     # CSV columns group
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
     csv_columns_group.add_argument(
@@ -82,7 +82,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=DEFAULT_ETF_TICKER_COLUMN,
-        help=f"name of the column containing the ETF ticker, default `{DEFAULT_ETF_TICKER_COLUMN}`.",
+        help="name of the column containing the ETF ticker.",
     )
     csv_columns_group.add_argument(
         "--component-ticker-column",
@@ -90,7 +90,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=DEFAULT_COMPONENT_TICKER_COLUMN,
-        help=f"name of the column containing the component ticker, default `{DEFAULT_COMPONENT_TICKER_COLUMN}`.",
+        help="name of the column containing the component ticker.",
     )
     csv_columns_group.add_argument(
         "--market-value-column",
@@ -98,8 +98,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=DEFAULT_MARKET_VALUE_COLUMN,
-        help=f"name of the column containing the amount of $currency the ETF has of the component, \
-            default `{DEFAULT_MARKET_VALUE_COLUMN}`.",
+        help="name of the column containing the amount of $currency the ETF has of the component.",
     )
     csv_columns_group.add_argument(
         "--currency-column",
@@ -107,7 +106,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=DEFAULT_CURRENCY_COLUMN,
-        help=f"name of the column containing the currency of the market value, default `{DEFAULT_CURRENCY_COLUMN}`.",
+        help="name of the column containing the currency of the market value.",
     )
     csv_columns_group.add_argument(
         "--isin-column",
@@ -115,7 +114,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=DEFAULT_ISIN_COLUMN,
-        help=f"name of the column containing the isin of the component, default `{DEFAULT_ISIN_COLUMN}`.",
+        help="name of the column containing the isin of the component.",
     )
     # CSV parsing group
     csv_parsing_group = parser.add_argument_group("CSV parsing", "Details about CSV parsing process.")
@@ -126,7 +125,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default=",",
-        help="delimiter character of columns for the input CSV file, default `,`.",
+        help="delimiter character of columns for the input CSV file.",
     )
     csv_parsing_group.add_argument(
         "-q",
@@ -135,7 +134,7 @@ def _make_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="?",
         default='"',
-        help='quote character of strings for the input CSV file, default `"`.',
+        help="quote character of strings for the input CSV file.",
     )
     return parser
 
@@ -279,7 +278,7 @@ def parse_csv(
         .pipe(lambda df: df[df[etf_ticker_column].str.startswith(".") == False])  # noqa: E712
         .pipe(_describe, "Removed indices")
     )
-    # Avoit currency conversion if not wanted
+    # Avoid currency conversion if not wanted
     if "no-currency-conversion" not in kwargs or not kwargs["no-currency-conversion"]:
         df = (
             # Uniform currencies
@@ -313,5 +312,8 @@ def main():
     logger.info("Done!")
 
 
+"""
+The module can be used both as a command-line script and as an imported python module.
+"""
 if __name__ == "__main__":
     main()
