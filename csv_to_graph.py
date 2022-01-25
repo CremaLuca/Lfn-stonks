@@ -73,7 +73,7 @@ def _make_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not convert currencies to euros.",
     )
-    parser.add_argument("-log", "--loglevel", type=str, nargs="?", default=["warning"], help="provide logging level.")
+    parser.add_argument("-log", "--loglevel", type=str, nargs="?", default="warning", help="provide logging level.")
     # CSV columns group
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
     csv_columns_group.add_argument(
@@ -183,7 +183,7 @@ def _describe(df: pd.DataFrame, description: str = None) -> pd.DataFrame:
     """
     if description:
         logger.debug(description)
-    logger.debug(df.describe(include="all"))
+    logger.debug(f"\n{df.describe(include='all')}")
     return df
 
 
@@ -252,6 +252,9 @@ def parse_csv(
         # Remove rows without market value
         df.pipe(lambda df: df.dropna(subset=[market_value_column]))
         .pipe(_describe, "Filtered rows without market value")
+        # Remove exact duplicate rows
+        .pipe(lambda df: df.drop_duplicates())
+        .pipe(_describe, "Filtered exactly duplicate rows")
         # Fill missing currency values
         .pipe(lambda df: df.fillna(value={currency_column: default_currency[0]}, inplace=False))
         .pipe(_describe, "Filled NaN currency values")
@@ -306,7 +309,7 @@ def main():
     """
     parser = _make_parser()
     args = parser.parse_args()  # Parse command line arguments
-    logging.basicConfig(level=args.loglevel[0].upper())
+    logging.basicConfig(level=args.loglevel.upper())
 
     nx.write_gml(parse_csv(**vars(args)), f"{args.output[0]}.gml")
     logger.info("Done!")
