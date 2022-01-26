@@ -1,7 +1,6 @@
 import networkx as nx
 import random
 import scipy
-import numpy as np
 from typing import Set, Any, List
 
 
@@ -66,22 +65,21 @@ def connected_random_subgraph(G: nx.Graph, n: int) -> nx.Graph:
 
 
 def closeness_centrality_matrix(G):
-    A = nx.adjacency_matrix(G).tolil()  # matrix converted into list of lists
+    A = nx.adjacency_matrix(G).tolil()  # adjacency matrix converted into list of lists
+    # Run floyd-warshall algorithm to find shortest paths
     D = scipy.sparse.csgraph.floyd_warshall(A, directed=True, unweighted=False)
 
-    n = D.shape[0]
+    n = D.shape[0]  # Number of nodes
     centralities = {}
-    for r in range(0, n):
-
+    for node_index in range(0, n):
         cc = 0.0
+        possible_paths = D[node_index, :]
+        shortest_paths = list(filter(lambda x: x != float("inf"), possible_paths))
 
-        possible_paths = list(enumerate(D[r, :]))
-        shortest_paths = dict(filter(lambda x: not x[1] == np.inf, possible_paths))
-
-        total = sum(shortest_paths.values())
-        n_shortest_paths = len(shortest_paths) - 1.0
+        total = sum(shortest_paths)
+        n_shortest_paths = len(shortest_paths) - 1
         if total > 0.0 and n > 1:
             s = n_shortest_paths / (n - 1)
             cc = (n_shortest_paths / total) * s
-        centralities[r] = cc
+        centralities[node_index] = cc
     return centralities
