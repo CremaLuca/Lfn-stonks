@@ -1,5 +1,7 @@
 import networkx as nx
 import random
+import scipy
+import numpy as np
 from typing import Set, Any, List
 
 
@@ -8,7 +10,7 @@ __version__ = "0.2"
 __all__ = ["max_k_nodes", "betweenness_centrality_percent", "all_neighbors", "connected_random_subgraph"]
 
 
-def max_k_nodes(G: nx.Graph, k: int, attribute: str) -> List[nx.Node]:
+def max_k_nodes(G: nx.Graph, k: int, attribute: str) -> List[Any]:
     """
     Finds the k nodes with the highest value of the given attribute.
     """
@@ -54,10 +56,32 @@ def connected_random_subgraph(G: nx.Graph, n: int) -> nx.Graph:
             selected_candidate = candidate_nodes.pop()
         else:
             selected_candidate = random.choice(list(candidate_nodes))
-        # Remove the newly selected node from candidates
-        candidate_nodes.remove(selected_candidate)
+            # Remove the newly selected node from candidates
+            candidate_nodes.remove(selected_candidate)
         # Add the newly selected node to selected nodes
         selected_nodes.append(selected_candidate)
         # Add the newly selected node's neighbors to candidates (without already selected nodes)
         candidate_nodes.update(all_neighbors(G, selected_candidate) - set(selected_nodes))
     return nx.subgraph(G, selected_nodes)
+
+
+def closeness_centrality_matrix(G):
+    A = nx.adjacency_matrix(G).tolil()  # matrix converted into list of lists
+    D = scipy.sparse.csgraph.floyd_warshall(A, directed=True, unweighted=False)
+
+    n = D.shape[0]
+    centralities = {}
+    for r in range(0, n):
+
+        cc = 0.0
+
+        possible_paths = list(enumerate(D[r, :]))
+        shortest_paths = dict(filter(lambda x: not x[1] == np.inf, possible_paths))
+
+        total = sum(shortest_paths.values())
+        n_shortest_paths = len(shortest_paths) - 1.0
+        if total > 0.0 and n > 1:
+            s = n_shortest_paths / (n - 1)
+            cc = (n_shortest_paths / total) * s
+        centralities[r] = cc
+    return centralities
