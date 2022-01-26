@@ -1,6 +1,15 @@
 # Learning from networks project - Stonks
 
-Description
+The "Stonks" project main target is to find out how hard it is to find, obtain and clean a raw tabular ([relational database](https://en.wikipedia.org/wiki/Relational_database), [csv](https://en.wikipedia.org/wiki/Comma-separated_values), ...) dataset for a topic of interest, leaving the detailed data analysis to field experts.
+In our case the topic chosen is "Stock [ETFs](https://www.investopedia.com/terms/e/etf.asp) and their [underlying assets](https://www.investopedia.com/terms/u/underlying-asset.asp)", but most of the concepts are reusable in other fields.
+
+## Contents
+
+
+
+## Usage
+
+
 
 ## Contributing
 

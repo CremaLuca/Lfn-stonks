@@ -57,15 +57,16 @@ def _make_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         type=str,
         nargs="?",
-        default=["out_graph"],
-        help="path of the output file.",
+        default="out_graph",
+        help="output filename (without extension).",
     )
     parser.add_argument(
         "--default-currency",
         metavar="CURRENCY",
         type=str,
         nargs="?",
-        default=["USD"],
+        default="USD",
+        choices=CURRENCY_CONVERSION_RATES.keys(),
         help="default currency to use when it is not specified.",
     )
     parser.add_argument(
@@ -73,7 +74,15 @@ def _make_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not convert currencies to euros.",
     )
-    parser.add_argument("-log", "--loglevel", type=str, nargs="?", default="warning", help="provide logging level.")
+    parser.add_argument(
+        "-log",
+        "--loglevel",
+        type=str,
+        nargs="?",
+        default="warning",
+        choices=logging._levelToName.values(),
+        help="python default logger logging level name.",
+    )
     # CSV columns group
     csv_columns_group = parser.add_argument_group("CSV columns", "Location of the information in the CSV columns.")
     csv_columns_group.add_argument(
@@ -249,24 +258,25 @@ def parse_csv(
     df = df[wanted_columns]
 
     df = (
+        # Replace empty strings with None
+        df.pipe(lambda df: df.where(df.notnull(), None))
         # Remove rows without market value
-        df.pipe(lambda df: df.dropna(subset=[market_value_column]))
+        .pipe(lambda df: df.dropna(subset=[market_value_column]))
         .pipe(_describe, "Filtered rows without market value")
         # Remove exact duplicate rows
         .pipe(lambda df: df.drop_duplicates())
         .pipe(_describe, "Filtered exactly duplicate rows")
         # Fill missing currency values
-        .pipe(lambda df: df.fillna(value={currency_column: default_currency[0]}, inplace=False))
+        .pipe(lambda df: df.fillna(value={currency_column: default_currency}, inplace=False))
         .pipe(_describe, "Filled NaN currency values")
         # Remove ticker columns location (like .JP .AU .HK )
         .pipe(_replace, etf_ticker_column, LOCATION_REGEX, "")
         .pipe(_replace, component_ticker_column, LOCATION_REGEX, "")
         .pipe(_describe, "Removed ticker locations")
         # Remove "CASH" from tickers
-        # TODO: set the currency to the remaining part of the ticker
         .pipe(_replace, component_ticker_column, "CASH_", "")
         # Rename cash tickers ("0") to their currency
-        .pipe(_replace, component_ticker_column, "0", default_currency[0])
+        .pipe(_replace, component_ticker_column, "0", default_currency)
         .pipe(_describe, "Renamed cash constituents")
         # Fill missing tickers with the ticker from other components with the same ISIN
         .pipe(_fill_column, missing_column=component_ticker_column, filler_column=isin_column)
@@ -311,7 +321,7 @@ def main():
     args = parser.parse_args()  # Parse command line arguments
     logging.basicConfig(level=args.loglevel.upper())
 
-    nx.write_gml(parse_csv(**vars(args)), f"{args.output[0]}.gml")
+    nx.write_gml(parse_csv(**vars(args)), f"{args.output}.gml")
     logger.info("Done!")
 
 
