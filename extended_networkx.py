@@ -83,3 +83,13 @@ def closeness_centrality_matrix(G):
             cc = (n_shortest_paths / total) * s
         centralities[node_index] = cc
     return centralities
+
+def longest_path(G):
+    shortest_paths_lengths = dict(nx.all_pairs_shortest_path_length(G))
+    max = 0
+    for source in shortest_paths_lengths.keys():
+        for target in shortest_paths_lengths[source].keys():
+            if shortest_paths_lengths[source][target] > max:
+                max = shortest_paths_lengths[source][target]
+    return max
+  
