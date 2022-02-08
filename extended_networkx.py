@@ -3,8 +3,6 @@ import random
 import scipy
 from typing import Set, Any, List
 import igraph
-import random
-import collections
 
 
 __author__ = "Luca Crema, Riccardo Crociani"
@@ -87,6 +85,7 @@ def closeness_centrality_matrix(G):
         centralities[node_index] = cc
     return centralities
 
+
 def longest_path(G):
     shortest_paths_lengths = dict(nx.all_pairs_shortest_path_length(G))
     max = 0
@@ -95,44 +94,34 @@ def longest_path(G):
             if shortest_paths_lengths[source][target] > max:
                 max = shortest_paths_lengths[source][target]
     return max
-  
 
-def exclusive_neighborhood(G, v, Vp):
-    assert type(G)==igraph.Graph
-    assert type(v)==int
-    assert type(Vp)==set
+
+def exclusive_neighborhood(G: igraph.Graph, v: int, Vp: set):
     Nv = set(G.neighborhood(v))
     NVpll = G.neighborhood(list(Vp))
-    NVp = set([u for sublist in NVpll for u in sublist])
+    NVp = {u for sublist in NVpll for u in sublist}
     return Nv - NVp
 
-def extend_subgraph(G, Vsubgraph, Vextension, v, k, k_subgraphs):
-    assert type(G)==igraph.Graph
-    assert type(Vsubgraph)==set
-    assert type(Vextension)==set
-    assert type(v)==int
-    assert type(k)==int
-    assert type(k_subgraphs)==list
+
+def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k: int, k_subgraphs: List):
     if len(Vsubgraph) == k:
         k_subgraphs.append(Vsubgraph)
-        assert 1==len(set(G.subgraph(Vsubgraph).clusters(mode=igraph.WEAK).membership))
+        assert 1 == len(set(G.subgraph(Vsubgraph).clusters(mode=igraph.WEAK).membership))
         return
     while len(Vextension) > 0:
         w = random.choice(tuple(Vextension))
         Vextension.remove(w)
-        ## obtain the "exclusive neighborhood" Nexcl(w, vsubgraph)
+        # obtain the "exclusive neighborhood" Nexcl(w, vsubgraph)
         NexclwVsubgraph = exclusive_neighborhood(G, w, Vsubgraph)
-        VpExtension = Vextension | set([u for u in NexclwVsubgraph if u > v])
-        extend_subgraph(G, Vsubgraph | set([w]), VpExtension, v, k, k_subgraphs)
+        VpExtension = Vextension | {u for u in NexclwVsubgraph if u > v}
+        extend_subgraph(G, Vsubgraph | {w}, VpExtension, v, k, k_subgraphs)
     return
 
-def enumerate_subgraphs(G, k):
-    assert type(G)==igraph.Graph
-    assert type(k)==int
-    k_subgraphs = []
+
+def enumerate_subgraphs(G: igraph.Graph, k: int):
+    k_subgraphs: List = []
     for vertex_obj in G.vs:
         v = vertex_obj.index
-        Vextension = set([u for u in G.neighbors(v) if u > v])
-        extend_subgraph(G, set([v]), Vextension, v, k, k_subgraphs)
+        Vextension = {u for u in G.neighbors(v) if u > v}
+        extend_subgraph(G, {v}, Vextension, v, k, k_subgraphs)
     return k_subgraphs
-
