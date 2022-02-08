@@ -97,13 +97,13 @@ def longest_path(G):
 
 
 def exclusive_neighborhood(G: igraph.Graph, v: int, Vp: set):
-    Nv = set(G.neighborhood(v))
-    NVpll = G.neighborhood(list(Vp))
+    Nv = set(G.neighborhood(v, mode="out"))
+    NVpll = G.neighborhood(list(Vp), mode="out")
     NVp = {u for sublist in NVpll for u in sublist}
     return Nv - NVp
 
 
-def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k: int, k_subgraphs: List):
+def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k: int, k_subgraphs: list):
     if len(Vsubgraph) == k:
         k_subgraphs.append(Vsubgraph)
         assert 1 == len(set(G.subgraph(Vsubgraph).clusters(mode=igraph.WEAK).membership))
@@ -119,9 +119,9 @@ def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k:
 
 
 def enumerate_subgraphs(G: igraph.Graph, k: int):
-    k_subgraphs: List = []
+    k_subgraphs: list = []
     for vertex_obj in G.vs:
         v = vertex_obj.index
-        Vextension = {u for u in G.neighbors(v) if u > v}
+        Vextension = {u for u in G.neighbors(v, mode="out") if u > v}
         extend_subgraph(G, {v}, Vextension, v, k, k_subgraphs)
     return k_subgraphs
