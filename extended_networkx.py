@@ -66,6 +66,9 @@ def connected_random_subgraph(G: nx.Graph, n: int) -> nx.Graph:
 
 
 def closeness_centrality_matrix(G):
+    """
+    Returns the closeness centrality of all the nodes of G.
+    """
     A = nx.adjacency_matrix(G).tolil()  # adjacency matrix converted into list of lists
     # Run floyd-warshall algorithm to find shortest paths
     D = scipy.sparse.csgraph.floyd_warshall(A, directed=True, unweighted=False)
@@ -87,6 +90,9 @@ def closeness_centrality_matrix(G):
 
 
 def longest_path(G):
+    """
+    Rweturns the longest path of G.
+    """
     shortest_paths_lengths = dict(nx.all_pairs_shortest_path_length(G))
     max = 0
     for source in shortest_paths_lengths.keys():
@@ -97,6 +103,10 @@ def longest_path(G):
 
 
 def exclusive_neighborhood(G: igraph.Graph, v: int, Vp: set):
+    """
+    Used by ESU algorithm.
+    Returns the set of neighbors that are not already neighbors of any node in Vp.
+    """
     Nv = set(G.neighborhood(v, mode="out"))
     NVpll = G.neighborhood(list(Vp), mode="out")
     NVp = {u for sublist in NVpll for u in sublist}
@@ -104,6 +114,10 @@ def exclusive_neighborhood(G: igraph.Graph, v: int, Vp: set):
 
 
 def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k: int, k_subgraphs: list):
+    """
+    Used by ESU algorithm.
+    Updates Vextension and k_subgraphs.
+    """
     if len(Vsubgraph) == k:
         k_subgraphs.append(Vsubgraph)
         assert 1 == len(set(G.subgraph(Vsubgraph).clusters(mode=igraph.WEAK).membership))
@@ -119,6 +133,9 @@ def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k:
 
 
 def enumerate_subgraphs(G: igraph.Graph, k: int):
+    """
+    Returns a list of set objects containing the vertices of each of the size k subgraphs
+    """
     k_subgraphs: list = []
     for vertex_obj in G.vs:
         v = vertex_obj.index
