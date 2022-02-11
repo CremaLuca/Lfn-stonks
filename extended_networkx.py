@@ -88,6 +88,23 @@ def closeness_centrality_matrix(G):
         centralities[node_index] = cc
     return centralities
 
+def max_out_degree_vertex(G: nx.DiGraph):
+    """
+    Returns the vertex with the maximum out-degree in G.
+    """
+    return max(G.nodes(), key=lambda x: G.out_degree(x))
+
+def max_in_degree_vertex(G: nx.DiGraph):
+    """
+    Returns the vertex with the maximum in-degree in G.
+    """
+    return max(G.nodes(), key=lambda x: G.in_degree(x))
+
+def min_in_degree_vertex(G: nx.DiGraph):
+    """
+    Returns the vertex with the minimum in-degree in G.
+    """
+    return min(G.nodes(), key=lambda x: G.in_degree(x))
 
 def longest_path(G):
     """
