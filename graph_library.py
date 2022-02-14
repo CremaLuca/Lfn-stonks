@@ -72,9 +72,9 @@ def closeness_centrality_matrix(G):
     A = nx.adjacency_matrix(G).tolil()  # adjacency matrix converted into list of lists
     # Run floyd-warshall algorithm to find shortest paths
     D = scipy.sparse.csgraph.floyd_warshall(A, directed=True, unweighted=False)
-
-    n = D.shape[0]  # Number of nodes
+    node_list = list(G.nodes())
     centralities = {}
+    n = D.shape[0]  # Number of nodes
     for node_index in range(0, n):
         cc = 0.0
         possible_paths = D[node_index, :]
@@ -85,8 +85,9 @@ def closeness_centrality_matrix(G):
         if total > 0.0 and n > 1:
             s = n_shortest_paths / (n - 1)
             cc = (n_shortest_paths / total) * s
-        centralities[node_index] = cc
+        centralities[node_list[node_index]] = cc
     return centralities
+
 
 def max_out_degree_vertex(G: nx.DiGraph):
     """
@@ -94,17 +95,20 @@ def max_out_degree_vertex(G: nx.DiGraph):
     """
     return max(G.nodes(), key=lambda x: G.out_degree(x))
 
+
 def max_in_degree_vertex(G: nx.DiGraph):
     """
     Returns the vertex with the maximum in-degree in G.
     """
     return max(G.nodes(), key=lambda x: G.in_degree(x))
 
+
 def min_in_degree_vertex(G: nx.DiGraph):
     """
     Returns the vertex with the minimum in-degree in G.
     """
     return min(G.nodes(), key=lambda x: G.in_degree(x))
+
 
 def longest_path(G):
     """
