@@ -22,7 +22,7 @@ Parse the csv dataset to a graph in `gml` format using the `csv_to_graph` module
 
 ```sh
 pip install -r requirements.txt
-python csv_to_dataset.py dataset.csv -o out_graph
+python csv_to_graph.py dataset.csv -o out_graph -log DEBUG
 ```
 
 Now you are ready to run the experiments in the Jupyter notebook `notebook.ipynb`.
