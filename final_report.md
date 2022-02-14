@@ -13,7 +13,7 @@ We want to explore the process of **data gathering**, **convert** them **to a gr
 
 ## Data
 
-Exchanged Traded Funds (ETFs) components datasets.
+Exchanged Traded Funds (ETFs or "funds") components datasets.
 
 An ETF is an asset traded on the stock market just like any other stock that usually tracks a stock index.
 The ETF's "underlying" components are the same as the tracked index's component and are bought in the same percentage as defined in the index.
@@ -21,28 +21,49 @@ An ETF is emitted and sold by an "Authorized Partecipant" which is in charge of 
 
 ### Where to find it
 
-Start from an initial dataset found for free [at this link](https://masterdatareports.com/), which is updated at around the end of each month.
+The dataset we used can be found for free [at this link](https://masterdatareports.com/Download-Files/ConstituentData42.csv).
 
 ### What kind of graph
 
-We want to produce a weighted directed graph. The nodes can represent fund or component, note that a fund node can also be a component. Edges go from a fund node to a component node and the weight is the amount of money in euros the fund owns of that component.
+We want to produce a weighted directed graph. The nodes can represent an ETF/fund or a component, note that a fund node can also be a component to another fund. Edges go from a fund node to a component node and the weight is the amount of money in euros the fund owns of that component.
 
 ### Number of nodes and edges
 
-We were able to extract 25396 nodes and 396114 edges from the dataset which is a constant factor away from what the sizes we expected.
-We have about 1500 ETF nodes and 21000 components, where an ETF has 250 components on average and a component is part of 84 ETFs on average.
+We were able to extract around `25000` nodes and `396000` edges from the dataset which is only a constant factor away from the sizes we expected in the project proposal.
+We have about `1500` ETF nodes and `21000` components, where an ETF has `250` components on average and a component is part of `18` ETFs on average.
 
 ## Method
 
-The method we are going to use to parse the gathered data into a graph is mostly based on trial and error but although each dataset has its own types of errors we can apply standard data cleaning techniques.
+The method we used to parse the gathered data into a graph is mostly based on trial and error but although each dataset has its own types of errors we applied standard data cleaning techniques.
+Later we tried to analised the parsed graph to extract some of the metrics looking for unexpected values.
 
 ### Data cleaning
 
-### Data parsing
+An initial error detection method is to manually check the data and see if there are any unexpected values, but being the dataset of `856000` rows this is not feasible. So we started by applying simple standard data cleaning methods, but this lead to dropping too many rows. At the end we had to tailor-make our cleaning methods with **a lot** of trial and error.
+The result is a pipeline of around 9 steps that are:
+
+- Drop rows with missing "market value" values
+- Drop duplicate rows
+- Fill empty currency values with "USD" (which is a strong assumption, but we would have lost too many rows otherwise)
+- Remove ticker locations (.MI, .JP, .NQ) from ticker names
+- Removing "CASH_" from ticker names that cleary represent currencies
+- Replacing "0" tickers with the currency value
+- Filling missing ticker values with ticker values from other rows with the same ISIN (ISIN and Ticker are both identifier of a stock, although ISIN is unique in the world and ticker is unique for the single exchange)
+- Drop rows with invalid ticker values using regex
+- Converting all currencies to EUR
+
+At the end of the pipeline we are able to preserve `396000` of the `856000` lines.
+
+The pipeline was then generalized to accept parameters, so the `csv_to_graph.py` can parse datasets from the same source even if they were to change or the project requirements change.
+
+### Graph parsing
+
+The cleaned pandas datatable is parsed into a directed graph using the `networkx.from_pandas_edgelist` function, using the `weight` column as the edge weight.
+The best format to store the graph in a file is a `.gml` file, as it is used by visualization programs (Gephi) and supports weights on edges (unlike plain edge list).
 
 ### Graph analysis
 
-Once the datasets are clean and parsed, we applied some of the node-level metrics, network patterns, network clustering algorithms, and node embeddings, exploring the limits of the exact computations and the reachable levels of approximation.
+Once the dataset is clean and parsed to graph, we applied some of the node-level metrics, network patterns, network clustering algorithms, and node embeddings, exploring the limits of the exact computations and the reachable levels of approximation.
 
 - #### In-degree(v) and out-degree(v)
 
@@ -72,7 +93,7 @@ Once the datasets are clean and parsed, we applied some of the node-level metric
 - #### Embedding using node2vec approach
 
     A quick way to get an idea of the graph structure are embeddings.
-    We used the python implementation of node2vec to embed the graph in two dimension and visulize it through matplotlib.
+    We used a python implementation of node2vec to embed the graph in a two dimension space and visulize it using matplotlib.
 
 - #### ESU algorithm
 
