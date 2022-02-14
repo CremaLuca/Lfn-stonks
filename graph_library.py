@@ -1,9 +1,9 @@
-import networkx as nx
 import random
-import scipy
-from typing import Set, Any, List
-import igraph
+from typing import Any, List, Set
 
+import igraph
+import networkx as nx
+import scipy
 
 __author__ = "Luca Crema, Riccardo Crociani"
 __version__ = "0.2"
@@ -23,12 +23,12 @@ def betweenness_centrality_percent(G: nx.Graph, percentage: float = 0.1, normali
     """
     if percentage < 0.0 or percentage > 1.0:
         raise ValueError("Percentage must be between 0.0 and 1.0.")
-    n = G.number_of_nodes()
+    n: int = G.number_of_nodes()
     k = int(n * percentage)
     return nx.betweenness_centrality(G, k=k, normalized=normalized, weight="weight")
 
 
-def all_neighbors(G: nx.DiGraph, n) -> Set[Any]:
+def all_neighbors(G: nx.DiGraph, n: str) -> Set[Any]:
     """
     Returns a set of successors and predecessors of node n in the DiGraph G.
     """
@@ -52,6 +52,7 @@ def connected_random_subgraph(G: nx.Graph, n: int) -> nx.Graph:
     selected_nodes: List[Any] = [start_node]
     candidate_nodes: Set[Any] = all_neighbors(G, start_node)
     while len(selected_nodes) < n and len(candidate_nodes) > 0:
+        # Avoid random selection if only one node is available
         if len(candidate_nodes) == 1:
             selected_candidate = candidate_nodes.pop()
         else:
@@ -68,11 +69,13 @@ def connected_random_subgraph(G: nx.Graph, n: int) -> nx.Graph:
 def closeness_centrality_matrix(G):
     """
     Returns the closeness centrality of all the nodes of G.
+
+    Source: https://medium.com/@pasdan/closeness-centrality-via-networkx-is-taking-too-long-1a58e648f5ce
     """
     A = nx.adjacency_matrix(G).tolil()  # adjacency matrix converted into list of lists
     # Run floyd-warshall algorithm to find shortest paths
     D = scipy.sparse.csgraph.floyd_warshall(A, directed=True, unweighted=False)
-    node_list = list(G.nodes())
+    node_list = list(G.nodes())  # Used to name the nodes
     centralities = {}
     n = D.shape[0]  # Number of nodes
     for node_index in range(0, n):
@@ -158,6 +161,8 @@ def extend_subgraph(G: igraph.Graph, Vsubgraph: set, Vextension: set, v: int, k:
 def enumerate_subgraphs(G: igraph.Graph, k: int):
     """
     Returns a list of set objects containing the vertices of each of the size k subgraphs
+
+    Source: https://notebook.community/ramseylab/networkscompbio/class18_motifs_python3_template
     """
     k_subgraphs: list = []
     for vertex_obj in G.vs:

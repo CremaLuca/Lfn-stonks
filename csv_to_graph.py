@@ -4,14 +4,15 @@ Loads a constituent CSV file and converts it to a newtorkx graph in weitghted ed
 Can be used both as a command-line script and as a python imporable module.
 """
 
-import pandas as pd
-import networkx as nx
-from typing import Dict, List
-import logging
 import argparse
+import logging
+from typing import Dict, List
+
+import networkx as nx
+import pandas as pd
 
 __author__ = "Luca Crema"
-__version__ = "1.0"
+__version__ = "1.1"
 __all__ = ["parse_csv"]
 
 
