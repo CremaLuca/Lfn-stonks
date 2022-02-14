@@ -110,17 +110,19 @@ def min_in_degree_vertex(G: nx.DiGraph):
     return min(G.nodes(), key=lambda x: G.in_degree(x))
 
 
-def longest_path(G):
+def longest_path(G) -> List[str]:
     """
-    Rweturns the longest path of G.
+    Returns the longest path of G.
     """
-    shortest_paths_lengths = dict(nx.all_pairs_shortest_path_length(G))
-    max = 0
-    for source in shortest_paths_lengths.keys():
-        for target in shortest_paths_lengths[source].keys():
-            if shortest_paths_lengths[source][target] > max:
-                max = shortest_paths_lengths[source][target]
-    return max
+    shortest_paths = dict(nx.all_pairs_shortest_path(G))
+    max_len = 0
+    max_path = None
+    for source in shortest_paths.keys():
+        for target in shortest_paths[source].keys():
+            if len(shortest_paths[source][target]) > max_len:
+                max_len = len(shortest_paths[source][target])
+                max_path = shortest_paths[source][target]
+    return max_path
 
 
 def exclusive_neighborhood(G: igraph.Graph, v: int, Vp: set):
