@@ -86,3 +86,22 @@ Another critical part of the project was finding, devising and adapting existing
 - [Node2vec implementation](https://github.com/eliorc/node2vec)
 - [Closeness centrality Floyd-Warshall implementation](https://medium.com/@pasdan/closeness-centrality-via-networkx-is-taking-too-long-1a58e648f5ce)
 - [ESU algorithm implementation](https://notebook.community/ramseylab/networkscompbio/class18_motifs_python3_template)
+
+## Work done by Riccardo Crociani:
+- ### notebook.ipynb
+    - Load graph and basic information
+    - Node-level feature
+        - Betweenness centrality (approximated)
+        - Closeness centrality
+        - Clustering coefficient
+    - Graphlet and motifs
+        - ESU algorithm
+- ### graph_library.py
+    - closeness_centrality_matrix(G)
+    - max_out_degree_vertex(G)
+    - max_in_degree_vertex(G)
+    - min_in_degree_vertex(G)
+    - longest_path(G)
+    - exclusive_neighborhood(G, v, Vp)
+    - extend_subgraph(G, Vsubgraph, Vextension, v, k, k_subgraphs)
+    - enumerate_subgraphs(G, k)
