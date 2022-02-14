@@ -11,6 +11,17 @@ How hard is it to work on a new raw dataset? Which **useful** metrics can be com
 
 We want to explore the process of **data gathering**, **convert** them **to a graph** and **compute meaningful metrics** on it.
 
+## Content
+
+The content of the project is entirely browsable on the [GitHub repository](https://github.com/CremaLuca/Lfn-stonks) where you can find the following:
+
+- The [README](https://github.com/CremaLuca/Lfn-stonks/README.md) with instructions on how to run the project.
+- The Jupyter [notebook.ipynb](https://github.com/CremaLuca/Lfn-stonks/notebook.ipynb) with the (already executed) code.
+- **This report** file source: [final_report.md](https://github.com/CremaLuca/Lfn-stonks/final_report.md).
+- The libraries [csv_to_graph.py](https://github.com/CremaLuca/Lfn-stonks/csv_to_graph.py) and [graph_library.py](https://github.com/CremaLuca/Lfn-stonks/graph_library.py) used in the notebook.
+
+NOTE: you can view the project with the VSCode interface on your browser at [this link](https://github.dev/CremaLuca/Lfn-stonks)
+
 ## Data
 
 Exchanged Traded Funds (ETFs or "funds") components datasets.
@@ -92,8 +103,8 @@ Once the dataset is clean and parsed to graph, we applied some of the node-level
 
 - #### Embedding using node2vec approach
 
-    A quick way to get an idea of the graph structure are embeddings.
-    We used a python implementation of node2vec to embed the graph in a two dimension space and visulize it using matplotlib.
+    A quick way to get an idea of the graph structure are two dimensional embeddings.
+    We used a python implementation of node2vec to embed the graph in a two dimension space and visulize it using the matplotlib library.
 
 - #### ESU algorithm
 
@@ -137,7 +148,6 @@ Another critical part of the project was finding, devising and adapting existing
   - Learned python library `argparse` to create a parametrized CLI script to clean and parse the dataset.
   - Learned python library `pandas` methods to have a more readable data cleaning pipeline.
   - Investigated different file formats to store the parsed graph.
-
 
 - #### `notebook.ipynb`
 
